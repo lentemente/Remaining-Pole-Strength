@@ -1,4 +1,4 @@
-<h2 class="sr-only">Interactive pole cross-section showing how shell decay, core decay, and asymmetric decay offset reduce section modulus and increase bending stress, with MOR selected by AS/NZS strength group</h2>
+<h2 class="sr-only">Interactive pole cross-section showing how shell decay, core decay, and asymmetric decay offset reduce section modulus and increase bending stress, with force and height inputs and MOR selected by AS/NZS strength group</h2>
 
 <div style="display:grid; grid-template-columns: 280px 1fr; gap: 24px; align-items: start;">
 
@@ -60,14 +60,25 @@
       </div>
       <div>
         <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;">
-          <label style="color:var(--text-secondary, #555555);">Applied moment M (kNm)</label>
-          <span id="m-out" style="font-weight:500;">15</span>
+          <label style="color:var(--text-secondary, #555555);">Applied force F (kN)</label>
+          <span id="f-out" style="font-weight:500;">1.5</span>
         </div>
-        <input type="range" id="m" min="1" max="100" step="1" value="15" style="width:100%;" />
+        <input type="range" id="f" min="0.1" max="20" step="0.1" value="1.5" style="width:100%;" />
+      </div>
+      <div>
+        <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;">
+          <label style="color:var(--text-secondary, #555555);">Height above ground h (m)</label>
+          <span id="h-out" style="font-weight:500;">10</span>
+        </div>
+        <input type="range" id="h" min="1" max="15" step="0.1" value="10" style="width:100%;" />
       </div>
     </div>
 
-    <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:12px;">
+    <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:12px;">
+      <div style="background:var(--surface-1, #f0f0ee); border-radius:8px; padding:1rem;">
+        <p style="font-size:13px; color:var(--text-secondary, #555555); margin:0 0 4px;">Applied moment M</p>
+        <p id="m-out" style="font-size:24px; font-weight:500; margin:0;">--</p>
+      </div>
       <div style="background:var(--surface-1, #f0f0ee); border-radius:8px; padding:1rem;">
         <p style="font-size:13px; color:var(--text-secondary, #555555); margin:0 0 4px;">S remaining</p>
         <p id="s-remaining" style="font-size:24px; font-weight:500; margin:0;">--</p>
@@ -86,11 +97,26 @@
   </div>
 </div>
 
+<div style="margin-top:2rem; padding-top:1.25rem; border-top:0.5px solid var(--border, #dddddd);">
+  <p style="font-size:13px; font-weight:500; color:var(--text-primary, #222222); margin:0 0 10px;">Methodology notes</p>
+  <ul style="font-size:12.5px; color:var(--text-secondary, #555555); line-height:1.6; margin:0; padding-left:18px;">
+    <li>Applied moment: <span style="font-family:var(--font-mono, monospace);">M = F &times; h</span>, force at height h above ground line.</li>
+    <li>Section modulus, no decay: <span style="font-family:var(--font-mono, monospace);">S = &pi;D&sup3;/32</span>.</li>
+    <li>Shell decay (outer loss, depth t): effective outer diameter <span style="font-family:var(--font-mono, monospace);">D&minus;2t</span>, applied to the solid-circle formula.</li>
+    <li>Core decay (hollow centre, diameter d): annulus formula <span style="font-family:var(--font-mono, monospace);">S = &pi;(D&#8308;&minus;d&#8308;)/(32D)</span> &mdash; core loss costs far less S than shell loss of the same depth, since bending stress is highest at the outer fibre and near zero at the centre.</li>
+    <li>Asymmetry: offsetting the core toward one side thins the wall on that side; S is penalised by the ratio of thinned wall to the symmetric-case wall thickness. This is a simplified directional approximation, not a rigorous shifted-centroid calculation.</li>
+    <li>Stress at extreme fibre: <span style="font-family:var(--font-mono, monospace);">&sigma; = M / S</span>.</li>
+    <li>Moment capacity: <span style="font-family:var(--font-mono, monospace);">M_capacity = S &times; MOR</span>. Utilisation = <span style="font-family:var(--font-mono, monospace);">M / M_capacity</span>.</li>
+    <li>MOR values are indicative AS/NZS strength-group characteristic (design) values, not measured per-pole. Assumes symmetric decay unless offset is used; assumes worst-case load direction aligned with the thinnest wall.</li>
+    <li>Status bands (pass &lt;80%, monitor 80&ndash;100%, fail &ge;100%) are a simplified risk convention, not derived from a probabilistic reliability analysis.</li>
+  </ul>
+</div>
+
 <script>
 (function(){
   const $ = id => document.getElementById(id);
-  const ids = ['D','t','d','offset','m'];
-  const outs = {D:'D-out', t:'t-out', d:'d-out', offset:'offset-out', m:'m-out'};
+  const ids = ['D','t','d','offset','f','h'];
+  const outs = {D:'D-out', t:'t-out', d:'d-out', offset:'offset-out', f:'f-out', h:'h-out'};
 
   const cx = 140, cy = 140;
   const statusColor = {pass: '#639922', monitor: '#BA7517', fail: '#A32D2D'};
@@ -102,10 +128,13 @@
     const d = +$('d').value;
     const offsetPct = +$('offset').value / 100;
     const mor = +$('group').value;
-    const M = +$('m').value;
+    const F = +$('f').value;
+    const h = +$('h').value;
+    const M = F * h;
 
     ids.forEach(id => $(outs[id]).textContent = id==='offset' ? (+$(id).value)+'%' : $(id).value);
     $('mor-out').textContent = mor + ' MPa';
+    $('m-out').textContent = Math.round(M*10)/10 + ' kNm';
 
     const outerD = Math.max(D - 2*t, 1);
     const outerR = outerD/2;
