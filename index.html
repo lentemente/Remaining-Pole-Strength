@@ -1,0 +1,196 @@
+<h2 class="sr-only">Interactive pole cross-section showing how shell decay, core decay, and asymmetric decay offset reduce section modulus and increase bending stress, with MOR selected by AS/NZS strength group</h2>
+
+<div style="display:grid; grid-template-columns: 280px 1fr; gap: 24px; align-items: start;">
+
+  <div>
+    <svg id="crossSection" viewBox="0 0 280 280" style="width:100%; height:auto; display:block;">
+      <circle id="originalCircle" cx="140" cy="140" r="120" fill="none" stroke="var(--border-strong, #999999)" stroke-dasharray="4 3" />
+      <path id="shellShape" d="" fill="#EF9F27" stroke="#639922" stroke-width="2" />
+      <circle id="coreShape" cx="140" cy="140" r="0" fill="var(--surface-2, #ffffff)" stroke="var(--border-strong, #999999)" stroke-width="1" />
+      <line id="stressLine" x1="0" y1="0" x2="0" y2="0" stroke="var(--border-strong, #999999)" stroke-width="1" stroke-dasharray="3 2" />
+      <circle id="stressPoint" cx="0" cy="0" r="6" fill="#639922" stroke="var(--surface-2, #ffffff)" stroke-width="2" />
+    </svg>
+    <p style="font-size:12px; color:var(--text-muted, #888888); text-align:center; margin-top:4px;">Dashed = original sound section. Orange = sound wood. Dot = extreme fibre (max stress point).</p>
+  </div>
+
+  <div>
+    <div style="display:flex; flex-direction:column; gap:14px; margin-bottom:1.25rem;">
+      <div>
+        <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;">
+          <label style="color:var(--text-secondary, #555555);">Original diameter D (mm)</label>
+          <span id="D-out" style="font-weight:500;">400</span>
+        </div>
+        <input type="range" id="D" min="150" max="600" step="10" value="400" style="width:100%;" />
+      </div>
+      <div>
+        <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;">
+          <label style="color:var(--text-secondary, #555555);">Shell decay depth t (mm)</label>
+          <span id="t-out" style="font-weight:500;">20</span>
+        </div>
+        <input type="range" id="t" min="0" max="150" step="5" value="20" style="width:100%;" />
+      </div>
+      <div>
+        <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;">
+          <label style="color:var(--text-secondary, #555555);">Core (heart rot) diameter d (mm)</label>
+          <span id="d-out" style="font-weight:500;">100</span>
+        </div>
+        <input type="range" id="d" min="0" max="400" step="5" value="100" style="width:100%;" />
+      </div>
+      <div>
+        <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;">
+          <label style="color:var(--text-secondary, #555555);">Asymmetry — decay offset (% of radius toward one side)</label>
+          <span id="offset-out" style="font-weight:500;">0%</span>
+        </div>
+        <input type="range" id="offset" min="0" max="90" step="5" value="0" style="width:100%;" />
+      </div>
+      <div>
+        <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;">
+          <label style="color:var(--text-secondary, #555555);">Strength group (AS/NZS, characteristic MOR)</label>
+          <span id="mor-out" style="font-weight:500;">55 MPa</span>
+        </div>
+        <select id="group" style="width:100%; height:36px;">
+          <option value="130">S1 — ~130 MPa (e.g. ironbark, turpentine)</option>
+          <option value="100">S2 — ~100 MPa (e.g. blackbutt, spotted gum)</option>
+          <option value="80">S3 — ~80 MPa (e.g. grey gum)</option>
+          <option value="65">S4 — ~65 MPa</option>
+          <option value="50">S5 — ~50 MPa</option>
+          <option value="55" selected>S6 — ~55 MPa (e.g. radiata pine, treated)</option>
+          <option value="30">S7 — ~30 MPa (lower-density softwoods)</option>
+        </select>
+      </div>
+      <div>
+        <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;">
+          <label style="color:var(--text-secondary, #555555);">Applied moment M (kNm)</label>
+          <span id="m-out" style="font-weight:500;">15</span>
+        </div>
+        <input type="range" id="m" min="1" max="100" step="1" value="15" style="width:100%;" />
+      </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:12px;">
+      <div style="background:var(--surface-1, #f0f0ee); border-radius:8px; padding:1rem;">
+        <p style="font-size:13px; color:var(--text-secondary, #555555); margin:0 0 4px;">S remaining</p>
+        <p id="s-remaining" style="font-size:24px; font-weight:500; margin:0;">--</p>
+      </div>
+      <div style="background:var(--surface-1, #f0f0ee); border-radius:8px; padding:1rem;">
+        <p style="font-size:13px; color:var(--text-secondary, #555555); margin:0 0 4px;">Stress at extreme fibre</p>
+        <p id="stress-out" style="font-size:24px; font-weight:500; margin:0;">--</p>
+      </div>
+      <div style="background:var(--surface-1, #f0f0ee); border-radius:8px; padding:1rem;">
+        <p style="font-size:13px; color:var(--text-secondary, #555555); margin:0 0 4px;">Utilisation</p>
+        <p id="util-out" style="font-size:24px; font-weight:500; margin:0;">--</p>
+      </div>
+    </div>
+
+    <div id="status-banner" style="margin-top:12px; padding:10px 14px; border-radius:8px; font-size:14px; font-weight:500;"></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const $ = id => document.getElementById(id);
+  const ids = ['D','t','d','offset','m'];
+  const outs = {D:'D-out', t:'t-out', d:'d-out', offset:'offset-out', m:'m-out'};
+
+  const cx = 140, cy = 140;
+  const statusColor = {pass: '#639922', monitor: '#BA7517', fail: '#A32D2D'};
+  const statusBg = {pass: '#EAF3DE', monitor: '#FAEEDA', fail: '#FCEBEB'};
+
+  function compute(){
+    const D = +$('D').value;
+    const t = +$('t').value;
+    const d = +$('d').value;
+    const offsetPct = +$('offset').value / 100;
+    const mor = +$('group').value;
+    const M = +$('m').value;
+
+    ids.forEach(id => $(outs[id]).textContent = id==='offset' ? (+$(id).value)+'%' : $(id).value);
+    $('mor-out').textContent = mor + ' MPa';
+
+    const outerD = Math.max(D - 2*t, 1);
+    const outerR = outerD/2;
+
+    const maxOffset = Math.max(outerR - d/2, 0);
+    const offset = offsetPct * maxOffset;
+    const coreR = d/2;
+
+    const thinWall = Math.max(outerR - (offset + coreR), 0);
+
+    let S;
+    if (coreR <= 0) {
+      S = Math.PI * Math.pow(outerD,3) / 32;
+    } else if (coreR >= outerR) {
+      S = 0;
+    } else {
+      const symS = Math.PI * (Math.pow(outerD,4) - Math.pow(d,4)) / (32*outerD);
+      const symThin = outerR - coreR;
+      const penaltyRatio = symThin > 0 ? Math.min(thinWall / symThin, 1) : 1;
+      S = symS * penaltyRatio;
+    }
+
+    const S0 = Math.PI * Math.pow(D,3) / 32;
+    const sRemainPct = S0 > 0 ? (S / S0) : 0;
+    const stress = S > 0 ? (M*1e6)/S : Infinity;
+    const capacity = S > 0 ? (S*mor)/1e6 : 0;
+    const util = capacity > 0 ? M/capacity : Infinity;
+
+    return {D,t,d,offset,offsetActual:offset,mor,M,outerR,coreR,S,S0,sRemainPct,stress,capacity,util,thinWall};
+  }
+
+  function statusKey(util){
+    if (!isFinite(util) || util >= 1) return 'fail';
+    if (util >= 0.8) return 'monitor';
+    return 'pass';
+  }
+
+  function draw(v){
+    const scale = 100 / (v.D/2 || 1);
+    const drawR = v.D/2 * scale;
+    $('originalCircle').setAttribute('r', drawR);
+
+    const outerRpx = v.outerR * scale;
+    const coreRpx = v.coreR * scale;
+    const offsetPx = v.offsetActual * scale;
+    const key = statusKey(v.util);
+
+    const shellPath = `M ${cx-outerRpx},${cy} A ${outerRpx},${outerRpx} 0 1 0 ${cx+outerRpx},${cy} A ${outerRpx},${outerRpx} 0 1 0 ${cx-outerRpx},${cy} Z`;
+    $('shellShape').setAttribute('d', shellPath);
+    $('shellShape').setAttribute('stroke', statusColor[key]);
+
+    $('coreShape').setAttribute('cx', cx - offsetPx);
+    $('coreShape').setAttribute('cy', cy);
+    $('coreShape').setAttribute('r', coreRpx);
+
+    const fibreX = cx + outerRpx;
+    const fibreY = cy;
+    $('stressPoint').setAttribute('cx', fibreX);
+    $('stressPoint').setAttribute('cy', fibreY);
+    $('stressPoint').setAttribute('fill', statusColor[key]);
+
+    $('stressLine').setAttribute('x1', cx);
+    $('stressLine').setAttribute('y1', cy);
+    $('stressLine').setAttribute('x2', fibreX);
+    $('stressLine').setAttribute('y2', fibreY);
+  }
+
+  function update(){
+    const v = compute();
+    draw(v);
+
+    $('s-remaining').textContent = isFinite(v.sRemainPct) ? Math.round(v.sRemainPct*100)+'%' : '0%';
+    $('stress-out').textContent = isFinite(v.stress) ? Math.round(v.stress*10)/10 + ' MPa' : '∞';
+    $('util-out').textContent = isFinite(v.util) ? Math.round(v.util*100)+'%' : '∞';
+
+    const banner = $('status-banner');
+    const key = statusKey(v.util);
+    const labels = {fail:'Fail — demand meets or exceeds capacity', monitor:'Monitor — low margin', pass:'Pass — adequate margin'};
+    banner.textContent = labels[key];
+    banner.style.background = statusBg[key];
+    banner.style.color = statusColor[key];
+  }
+
+  ids.forEach(id => $(id).addEventListener('input', update));
+  $('group').addEventListener('change', update);
+  update();
+})();
+</script>
